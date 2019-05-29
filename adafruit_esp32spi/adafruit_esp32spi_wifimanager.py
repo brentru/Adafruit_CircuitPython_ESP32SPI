@@ -34,6 +34,10 @@ WiFi Manager for making ESP32 SPI as WiFi much easier
 from adafruit_esp32spi import adafruit_esp32spi
 import adafruit_esp32spi.adafruit_esp32spi_requests as requests
 
+_RGB_LED_RED = 26
+_RGB_LED_GREEN = 25
+_RGB_LED_BLUE = 27
+
 class ESPSPI_WiFiManager:
     """
     A class to help manage the Wifi connection
@@ -42,8 +46,8 @@ class ESPSPI_WiFiManager:
         """
         :param ESP_SPIcontrol esp: The ESP object we are using
         :param dict secrets: The WiFi and Adafruit IO secrets dict (See examples)
-        :param status_pixel: (Optional) The pixel device - A NeoPixel or DotStar (default=None)
-        :type status_pixel: NeoPixel or DotStar
+        :param status_pixel: (Optional) The pixel device - A NeoPixel, DotStar, or `rgb_led` (default=None)
+        :type status_pixel: NeoPixel, DotStar, or `rgb_led`
         :param int attempts: (Optional) Failed attempts before resetting the ESP32 (default=2)
         """
         # Read the settings
@@ -53,8 +57,14 @@ class ESPSPI_WiFiManager:
         self.password = secrets['password']
         self.attempts = attempts
         requests.set_interface(self._esp)
-        self.statuspix = status_pixel
-        self.pixel_status(0)
+        if status_pixel == 'rgb_led':
+            self._esp.set_pin_mode(_RGB_LED_RED, 1)
+            self._esp.set_pin_mode(_RGB_LED_GREEN, 1)
+            self._esp.set_pin_mode(_RGB_LED_BLUE, 1)
+            self.statuspix = status_pixel
+        else:
+            self.statuspix = status_pixel
+        self.pixel_status((0, 0, 0))
 
     def reset(self):
         """
@@ -108,7 +118,7 @@ class ESPSPI_WiFiManager:
             self.connect()
         self.pixel_status((0, 0, 100))
         return_val = requests.get(url, **kw)
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return return_val
 
     def post(self, url, **kw):
@@ -145,7 +155,7 @@ class ESPSPI_WiFiManager:
             self.connect()
         self.pixel_status((0, 0, 100))
         return_val = requests.put(url, **kw)
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return return_val
 
     def patch(self, url, **kw):
@@ -164,7 +174,7 @@ class ESPSPI_WiFiManager:
             self.connect()
         self.pixel_status((0, 0, 100))
         return_val = requests.patch(url, **kw)
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return return_val
 
     def delete(self, url, **kw):
@@ -183,7 +193,7 @@ class ESPSPI_WiFiManager:
             self.connect()
         self.pixel_status((0, 0, 100))
         return_val = requests.delete(url, **kw)
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return return_val
 
     def ping(self, host, ttl=250):
@@ -199,7 +209,7 @@ class ESPSPI_WiFiManager:
             self.connect()
         self.pixel_status((0, 0, 100))
         response_time = self._esp.ping(host, ttl=ttl)
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return response_time
 
     def ip_address(self):
@@ -209,7 +219,7 @@ class ESPSPI_WiFiManager:
         if not self._esp.is_connected:
             self.connect()
         self.pixel_status((0, 0, 100))
-        self.pixel_status(0)
+        self.pixel_status((0, 0, 0))
         return self._esp.pretty_ip(self._esp.ip_address)
 
     def pixel_status(self, value):
@@ -219,7 +229,11 @@ class ESPSPI_WiFiManager:
         :param value: The value to set the Board's status LED to
         :type value: int or 3-value tuple
         """
-        if self.statuspix:
+        if self.statuspix == 'rgb_led':
+            self._esp.set_digital_write(_RGB_LED_RED, value[0])
+            self._esp.set_digital_write(_RGB_LED_GREEN, value[1])
+            self._esp.set_digital_write(_RGB_LED_BLUE, value[2])
+        elif self.statuspix:
             self.statuspix.fill(value)
 
     def signal_strength(self):
