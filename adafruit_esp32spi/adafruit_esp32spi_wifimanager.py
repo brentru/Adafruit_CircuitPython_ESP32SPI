@@ -42,8 +42,9 @@ class ESPSPI_WiFiManager:
         """
         :param ESP_SPIcontrol esp: The ESP object we are using
         :param dict secrets: The WiFi and Adafruit IO secrets dict (See examples)
-        :param status_pixel: (Optional) The pixel device - A NeoPixel or DotStar (default=None)
-        :type status_pixel: NeoPixel or DotStar
+        :param status_pixel: (Optional) The pixel device - A NeoPixel, DotStar,
+            or RGB LED. (default=None)
+        :type status_pixel: NeoPixel, DotStar, or RGB LED.
         :param int attempts: (Optional) Failed attempts before resetting the ESP32 (default=2)
         """
         # Read the settings
@@ -54,6 +55,10 @@ class ESPSPI_WiFiManager:
         self.attempts = attempts
         requests.set_interface(self._esp)
         self.statuspix = status_pixel
+        if hasattr(self.statuspix, '_rgb_led_pins'):
+            self._rgb_led = True
+        else:
+            self._rgb_led = False
         self.pixel_status(0)
 
     def reset(self):
@@ -214,13 +219,15 @@ class ESPSPI_WiFiManager:
 
     def pixel_status(self, value):
         """
-        Change Status NeoPixel if it was defined
+        Change Status Pixel/LED if it was defined
 
-        :param value: The value to set the Board's status LED to
+        :param value: The value to set the Board's status pixel/led to
         :type value: int or 3-value tuple
         """
-        if self.statuspix:
+        if not self._rgb_led:
             self.statuspix.fill(value)
+        else:
+            self.statuspix.color = value
 
     def signal_strength(self):
         """
